@@ -1,0 +1,15 @@
+﻿@using CookiesAuth.Models
+@model User
+@{
+    ViewData[""] = "Dashboard";
+}
+
+<div class="container mt-5">
+     <div class="card shadow rounded-3">
+         <div class="card-body text-center">
+             <h2> Welcomem @Model.FullName</h2>
+             <p>Your username: <b>@Model.UserName</b></p>
+             <a href="@Url.Action("Logout","Account")" class="btn btn-danger mt3">Logut</a>
+         </div>
+     </div>
+</div>

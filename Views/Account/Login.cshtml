@@ -1,0 +1,30 @@
+﻿@using CookiesAuth.Models
+
+@model LoginViewModel;
+@{
+    ViewData["Title"] = "Login";
+}
+
+<div class="container mt-5" style="max-width: 400px">
+    <div class="card shadow rounded-3">
+        <div class="card-body">
+            <h3 class="text-centre mb-4">Sign IN</h3>
+            <form asp-action="Login" asp-controller="Account" method="post">
+                <div class="mb-3">
+                    <label asp-for="UserName" class="form-label"> </label>
+                    <input asp-for="UserName" class="form-control"/>
+                    <span asp-validation-for="UserName" class="text-danger"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Password" class="form-label"> </label>
+                    <input asp-for="Password" class="form-control" />
+                    <span asp-validation-for="Password" class="text-danger"></span>
+                </div>
+                <div class="mb-3">
+                    <input asp-for="RememberMe" class="form-check-input" />
+                    <label asp-for="RememberMe" class="form-label">Remember me</label>
+                </div>
+            </form>     
+        </div> 
+    </div> 
+</div>
