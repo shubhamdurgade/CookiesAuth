@@ -1,0 +1,38 @@
+﻿@using Microsoft.AspNetCore.Http;
+@inject IHttpContextAccessor HttpContextAccessor;
+
+@{
+    ViewData["Title"] = "Access Cookies in View";
+    var demoCookie = HttpContextAccessor?.HttpContext?.Request.Cookies["DemoCookies"];
+    var usernameCookie = HttpContextAccessor?.HttpContext?.Request.Cookies["Username"];
+}
+
+<h2 class="mb-2"> Access Cookies in Razor View </h2>
+
+<div class="mb-2">
+    <b>DemoCookie:</b>
+    @if (!string.IsNullOrEmpty(demoCookie))
+    {
+        @demoCookie
+    }
+    else
+    {
+        <span class="text-muted">not found</span>
+    }
+</div>
+
+<div class="mb-2">
+    <b>Username:</b>
+    @if (!string.IsNullOrEmpty(usernameCookie))
+    {
+        @usernameCookie
+    }
+    else
+    {
+        <span class="text-muted">not found</span>
+    }
+</div>
+
+<p class="text-mutes">
+    Here, we used <code>IHttpContextAccessor</code> to acces cookies directly inside a Razor view.
+</p>
