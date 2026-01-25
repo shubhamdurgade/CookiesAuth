@@ -1,25 +1,30 @@
 ﻿using CookiesAuth.Models;
+using CookiesAuth.Constants;
+using CookiesAuth.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
+using System.Security.Cryptography;
 
 namespace CookiesAuth.Controllers
 {
     public class AccountController : Controller
     {
         private readonly UserStoreService _userStoreService;
-        private const string CookieUserId = "UserId";
-        private const string CookieUserName = "UserName";
+        private readonly IUserDataProtector _dataProtector;
 
-        public AccountController(UserStoreService userStoreService)
+        public AccountController(
+            UserStoreService userStoreService,
+            IUserDataProtector dataProtector)
         {
             _userStoreService = userStoreService;
+            _dataProtector = dataProtector;
         }
 
         //Get : /Account/Login
         [HttpGet]
         public IActionResult Login()
         {
-            if (Request.Cookies.ContainsKey(CookieUserId))
+            if (Request.Cookies.ContainsKey(AuthConstants.CookieUserId))
             {
                 return RedirectToAction("Dashboard", "Account");
             }
@@ -43,7 +48,7 @@ namespace CookiesAuth.Controllers
 
             if (user == null)
             {
-                ModelState.AddModelError("", "Invalid usernaem or password");
+                ModelState.AddModelError("", "Invalid username or password");
                 return View(model);
             }
 
@@ -64,36 +69,76 @@ namespace CookiesAuth.Controllers
                 options.Expires = null;
             }
 
-            Response.Cookies.Append(CookieUserId, user.Id.ToString(), options);
-            Response.Cookies.Append(CookieUserName, user.UserName, options);
+            // Protect values before writing to cookies via IUserDataProtector
+            var protectedUserId = _dataProtector.Protect(user.Id.ToString());
+            var protectedUserName = _dataProtector.Protect(user.UserName);
+
+            Response.Cookies.Append(AuthConstants.CookieUserId, protectedUserId, options);
+            Response.Cookies.Append(AuthConstants.CookieUserName, protectedUserName, options);
             return RedirectToAction("Dashboard", "Account");
         }
 
         public IActionResult Dashboard()
         {
-            if (!Request.Cookies.ContainsKey(CookieUserId))
+            if (!Request.Cookies.ContainsKey(AuthConstants.CookieUserId))
             {
                 return RedirectToAction("Login", "Account");
             }
-            var userId = int.Parse(Request.Cookies[CookieUserId]!);
+
+            var protectedUserId = Request.Cookies[AuthConstants.CookieUserId]!;
+            string userIdString;
+            try
+            {
+                userIdString = _dataProtector.Unprotect(protectedUserId);
+            }
+            catch (CryptographicException)
+            {
+                // Invalid or tampered cookie -> force re-login
+                Response.Cookies.Delete(AuthConstants.CookieUserId);
+                Response.Cookies.Delete(AuthConstants.CookieUserName);
+                return RedirectToAction("Login", "Account");
+            }
+
+            if (!int.TryParse(userIdString, out var userId))
+            {
+                Response.Cookies.Delete(AuthConstants.CookieUserId);
+                Response.Cookies.Delete(AuthConstants.CookieUserName);
+                return RedirectToAction("Login", "Account");
+            }
+
             var user = _userStoreService.GetUser(userId);
             if (user == null)
             {
                 return RedirectToAction("Login", "Account");
             }
-            return View(user);
 
+            // Optionally unprotect username if needed in the view
+            if (Request.Cookies.ContainsKey(AuthConstants.CookieUserName))
+            {
+                try
+                {
+                    var protectedUserName = Request.Cookies[AuthConstants.CookieUserName]!;
+                    var userName = _dataProtector.Unprotect(protectedUserName);
+                    ViewData["UserName"] = userName;
+                }
+                catch (CryptographicException)
+                {
+                    // ignore, not critical
+                }
+            }
+
+            return View(user);
         }
 
         public IActionResult Logout()
         {
-            if (Request.Cookies.ContainsKey(CookieUserId))
+            if (Request.Cookies.ContainsKey(AuthConstants.CookieUserId))
             {
-                Response.Cookies.Delete(CookieUserId);
+                Response.Cookies.Delete(AuthConstants.CookieUserId);
             }
-            if (Request.Cookies.ContainsKey(CookieUserName))
+            if (Request.Cookies.ContainsKey(AuthConstants.CookieUserName))
             {
-                Response.Cookies.Delete(CookieUserName);
+                Response.Cookies.Delete(AuthConstants.CookieUserName);
             }
             return RedirectToAction("Login", "Account");
         }
